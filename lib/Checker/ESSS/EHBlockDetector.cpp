@@ -426,7 +426,7 @@ void EHBlockDetectorPass::identifyPotentialSanityChecks(const Function& function
                     return;
                 }
             }
-            Ctx->functionToSanityValuesAndConditions[&function].emplace_back(make_pair(value, cmp));
+            Ctx->errorHandlingRules.functionToSanityValuesAndConditions[&function].emplace_back(make_pair(value, cmp));
         };
         DataFlowAnalysis::getPotentialSanityCheck(BB, handle);
     }
@@ -574,7 +574,7 @@ void EHBlockDetectorPass::storeData() {
 #endif
 
             if (fraction >= IntervalConfidenceThreshold) {
-                auto& targetInterval = Ctx->functionErrorReturnIntervals.intervalFor(pair);
+                auto& targetInterval = Ctx->errorHandlingRules.functionErrorReturnIntervals.intervalFor(pair);
                 targetInterval.intersectionInPlace(interval);
                 intersected = true;
                 ++intervalCountsIt;
@@ -586,18 +586,18 @@ void EHBlockDetectorPass::storeData() {
         if (!intersected) {
             LOG(LOG_VERBOSE, "Dropped " << function->getName() << " due to low confidence, falling back to empty interval\n");
             // Empty interval indicates it must be checked, but not how. The following line creates an empty interval.
-            Ctx->functionErrorReturnIntervals.intervalFor(pair).clear();
+            Ctx->errorHandlingRules.functionErrorReturnIntervals.intervalFor(pair).clear();
         }
 
         // Note: we still need this data to compare support and confidence in case of inheriting error intervals
-        Ctx->functionToConfidenceMutex.lock();
-        Ctx->functionToConfidence[pair] = highestFraction;
-        Ctx->functionToConfidenceMutex.unlock();
+        Ctx->errorHandlingRules.functionToConfidenceMutex.lock();
+        Ctx->errorHandlingRules.functionToConfidence[pair] = highestFraction;
+        Ctx->errorHandlingRules.functionToConfidenceMutex.unlock();
     }
     functionToIntervalCounts.clear();
     // Remove transitive empty's
 #if 1
-    for (const auto& entry : Ctx->functionErrorReturnIntervals) {
+    for (const auto& entry : Ctx->errorHandlingRules.functionErrorReturnIntervals) {
         const auto& pair = entry.first;
         const auto& interval = entry.second;
         if (interval.empty()) {
@@ -610,7 +610,7 @@ void EHBlockDetectorPass::storeData() {
                     if (auto ret = dyn_cast<ReturnInst>(callerFunction->begin()->getTerminator())) {
                         if (auto call = dyn_cast_or_null<CallInst>(ret->getReturnValue())) {
                             if (call->getCalledFunction() == pair.first) {
-                                Ctx->functionErrorReturnIntervals.intervalFor(make_pair(callerFunction, 0), true).clear();
+                                Ctx->errorHandlingRules.functionErrorReturnIntervals.intervalFor(make_pair(callerFunction, 0), true).clear();
                                 LOG(LOG_INFO, "Empty " << callerFunction->getName() << "\n");
                             }
                         }
@@ -627,7 +627,7 @@ void EHBlockDetectorPass::associationAnalysisForErrorHandlers() {
     for (const auto& entry : functionToInErrorNotInErrorPair) {
         const auto& function = entry.first;
         const auto& counts = entry.second;
-        auto maybeInterval = Ctx->functionErrorReturnIntervals.maybeIntervalFor(make_pair(function, 0));
+        auto maybeInterval = Ctx->errorHandlingRules.functionErrorReturnIntervals.maybeIntervalFor(make_pair(function, 0));
         if (maybeInterval.hasValue())
             continue;
 
@@ -661,8 +661,8 @@ void EHBlockDetectorPass::stage0(Module* M) {
             }
         }
 
-        auto functionToSanityCheckCallAndCmpInstructionsIt = Ctx->functionToSanityValuesAndConditions.find(&F);
-        if (functionToSanityCheckCallAndCmpInstructionsIt == Ctx->functionToSanityValuesAndConditions.end())
+        auto functionToSanityCheckCallAndCmpInstructionsIt = Ctx->errorHandlingRules.functionToSanityValuesAndConditions.find(&F);
+        if (functionToSanityCheckCallAndCmpInstructionsIt == Ctx->errorHandlingRules.functionToSanityValuesAndConditions.end())
             continue;
 
 #if 0
@@ -1017,9 +1017,9 @@ void EHBlockDetectorPass::stage1(Module* M) {
     for (const auto& F : *M) {
         if (F.empty())
             continue;
-        auto it = Ctx->functionToSanityValuesAndConditions.find(&F);
-        LOG(LOG_VERBOSE, "Stage 1 for " << F.getName() << " with " << (it == Ctx->functionToSanityValuesAndConditions.end() ? 0 : it->second.size()) << " sanity values\n");
-        if (it == Ctx->functionToSanityValuesAndConditions.end())
+        auto it = Ctx->errorHandlingRules.functionToSanityValuesAndConditions.find(&F);
+        LOG(LOG_VERBOSE, "Stage 1 for " << F.getName() << " with " << (it == Ctx->errorHandlingRules.functionToSanityValuesAndConditions.end() ? 0 : it->second.size()) << " sanity values\n");
+        if (it == Ctx->errorHandlingRules.functionToSanityValuesAndConditions.end())
             continue;
         for (const auto& item : it->second) {
             const auto& valuePair = item.first;
@@ -1083,7 +1083,7 @@ llvm::Optional<bool> EHBlockDetectorPass::determineErrorBranchOfCallWithCompare(
     for (const auto *callee: calleesIt.getValue()->second) {
         //if (isProbablyPure(callee))
         //    continue;
-        auto maybeInterval = GlobalCtx.functionErrorReturnIntervals.maybeIntervalFor(make_pair(callee, returnValueIndex));
+        auto maybeInterval = GlobalCtx.errorHandlingRules.functionErrorReturnIntervals.maybeIntervalFor(make_pair(callee, returnValueIndex));
         //LOG(LOG_INFO, "Callee: " << callee->getName() << "\n");
         if (!maybeInterval.hasValue()) continue;
         //maybeInterval.value()->dump();
@@ -1138,7 +1138,7 @@ void EHBlockDetectorPass::propagateCheckedErrors() {
         }
     };
 
-    for (const auto& entry : Ctx->functionErrorReturnIntervals) {
+    for (const auto& entry : Ctx->errorHandlingRules.functionErrorReturnIntervals) {
         const auto& pair = entry.first;
         const auto& interval = entry.second;
         if (interval.empty()) continue;
@@ -1161,13 +1161,13 @@ void EHBlockDetectorPass::propagateCheckedErrors() {
 
         if (functionThatMightGetAPropagation->getReturnType()->isVoidTy())
             continue;
-        if (Ctx->functionErrorReturnIntervals.maybeIntervalFor(functionKeyPair).hasValue())
+        if (Ctx->errorHandlingRules.functionErrorReturnIntervals.maybeIntervalFor(functionKeyPair).hasValue())
             continue;
         if (returnsOnlyOneConstant(functionKeyPair.first))
             continue;
 
-        auto it = Ctx->functionToSanityValuesAndConditions.find(functionThatMightGetAPropagation);
-        if (it == Ctx->functionToSanityValuesAndConditions.end())
+        auto it = Ctx->errorHandlingRules.functionToSanityValuesAndConditions.find(functionThatMightGetAPropagation);
+        if (it == Ctx->errorHandlingRules.functionToSanityValuesAndConditions.end())
             continue;
             
         auto& potentialChecks = it->second;
@@ -1254,7 +1254,7 @@ void EHBlockDetectorPass::propagateCheckedErrors() {
 
         //newIntervals.dump();
         //LOG(LOG_INFO, "Completed successful iteration number " << iterationNumber << "\n");
-        Ctx->functionErrorReturnIntervals.mergeDestructivelyForOther(newIntervals);
+        Ctx->errorHandlingRules.functionErrorReturnIntervals.mergeDestructivelyForOther(newIntervals);
         ++iterationNumber;
     }
 }
@@ -1324,7 +1324,7 @@ void EHBlockDetectorPass::learnErrorsFromErrorBlocksForSelf() {
 
         //newIntervals.dump();
         //LOG(LOG_INFO, "Completed successful iteration number " << iterationNumber << "\n");
-        Ctx->functionErrorReturnIntervals.mergeDestructivelyForOther(newIntervals);
+        Ctx->errorHandlingRules.functionErrorReturnIntervals.mergeDestructivelyForOther(newIntervals);
         ++iterationNumber;
     }
 }

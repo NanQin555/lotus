@@ -76,12 +76,12 @@ struct GlobalContext {
     map<const Module*, AAResultsWrapperPass*> AAPass;
 
     // Error handling rules
-    struct {
+    struct ErrorHandlingRules {
         map<const Function*, vector<pair<pair<const Value*, unsigned int>, const class AbstractCondition*>>> functionToSanityValuesAndConditions;
         FunctionErrorReturnIntervals functionErrorReturnIntervals;
         std::mutex functionToConfidenceMutex;
         map<pair<const Function*, unsigned int>, float> functionToConfidence;
-    };
+    } errorHandlingRules;
 
 	bool shouldSkipFunction(const Function* function) const {
 		return function->empty() || UnifiedFuncSet.find(function) == UnifiedFuncSet.end();
