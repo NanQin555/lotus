@@ -2,6 +2,7 @@
 
 #include "Annotation/Pointer/PointerEffectSummary.h"
 
+#include <string>
 #include <unordered_map>
 
 namespace llvm

@@ -292,7 +292,7 @@ int main(int argc, const char* argv[]) {
     }
 
     // Cleanup memory to keep ASAN etc. happy
-    for (const auto& pair : GlobalCtx.functionToSanityValuesAndConditions) {
+    for (const auto& pair : GlobalCtx.errorHandlingRules.functionToSanityValuesAndConditions) {
         for (const auto& inner_pair : pair.second) {
             delete inner_pair.second;
         }

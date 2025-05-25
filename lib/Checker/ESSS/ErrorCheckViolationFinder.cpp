@@ -32,7 +32,7 @@ bool ErrorCheckViolationFinderPass::doFinalization(Module * /* M */) {
 
 void ErrorCheckViolationFinderPass::finish() {
     // Show learned rules for inspection by user and report bugs.
-    Ctx->functionErrorReturnIntervals.dump();
+    Ctx->errorHandlingRules.functionErrorReturnIntervals.dump();
     report();
 }
 
@@ -198,8 +198,8 @@ void ErrorCheckViolationFinderPass::determineMissingChecksAndPropagationRules(co
             // Otherwise, insert it.
             auto getConfidence = [this](const Function* function, bool& notFound) -> float {
                 notFound = false;
-                auto it = Ctx->functionToConfidence.find(make_pair(function, 0 /* Only return values supported right now */));
-                if (it == Ctx->functionToConfidence.end()) {
+                auto it = Ctx->errorHandlingRules.functionToConfidence.find(make_pair(function, 0 /* Only return values supported right now */));
+                if (it == Ctx->errorHandlingRules.functionToConfidence.end()) {
                     LOG(LOG_INFO, "Not found in totalFunctionToIntervalCounts\n");
                     notFound = true;
                     return 0;
@@ -243,7 +243,7 @@ void ErrorCheckViolationFinderPass::determineMissingChecksAndPropagationRules(co
 
                 if (edit) {
                     /*if (intersection.empty() || oldInterval.getValue()->size() > thisFunctionInterval.size()) */{
-                        Ctx->functionToConfidence[functionPair] = avgNewConfidence;
+                        Ctx->errorHandlingRules.functionToConfidence[functionPair] = avgNewConfidence;
                         replaceMap.emplace(functionPair, std::move(thisFunctionInterval));
                     }
                 }
@@ -264,8 +264,8 @@ void ErrorCheckViolationFinderPass::determineMissingChecksAndPropagationRules(co
     }
 
     // Remove the instructions from "instSet" which are checked for sure
-    auto it = Ctx->functionToSanityValuesAndConditions.find(&function);
-    if (it != Ctx->functionToSanityValuesAndConditions.end()) {
+    auto it = Ctx->errorHandlingRules.functionToSanityValuesAndConditions.find(&function);
+    if (it != Ctx->errorHandlingRules.functionToSanityValuesAndConditions.end()) {
         for (const auto &item : it->second) {
             const auto &pair = item.first;
             instSet.erase(pair.first);
@@ -349,8 +349,8 @@ void ErrorCheckViolationFinderPass::determineIncorrectChecks(const Function& fun
     return;
 #endif
 
-    auto it = Ctx->functionToSanityValuesAndConditions.find(&function);
-    if (it == Ctx->functionToSanityValuesAndConditions.end()) return;
+    auto it = Ctx->errorHandlingRules.functionToSanityValuesAndConditions.find(&function);
+    if (it == Ctx->errorHandlingRules.functionToSanityValuesAndConditions.end()) return;
     auto& pairs = it->second;
 
     map<pair<const Value*, unsigned int>, pair<Interval, Interval>> valueToInterval;
@@ -388,7 +388,7 @@ void ErrorCheckViolationFinderPass::determineIncorrectChecks(const Function& fun
             auto calleesIt = Ctx->Callees.find(call);
             if (calleesIt != Ctx->Callees.end()) {
                 return all_of(calleesIt->second, [&](const Function* target) {
-                    auto maybeInterval = Ctx->functionErrorReturnIntervals.maybeIntervalFor(make_pair(target, valueIndex));
+                    auto maybeInterval = Ctx->errorHandlingRules.functionErrorReturnIntervals.maybeIntervalFor(make_pair(target, valueIndex));
                     if (!maybeInterval.hasValue() || maybeInterval.getValue()->empty() || maybeInterval.getValue()->full())
                         return true;
                     return maybeInterval.getValue()->isSubsetOf(comparisonInterval);
@@ -524,7 +524,7 @@ void ErrorCheckViolationFinderPass::report() const {
                 Interval unionOfIntervals(true);
                 Interval intersectionOfIntervals(false);
                 for (const auto *callee: callees.getValue()->second) {
-                    auto calleeInterval = Ctx->functionErrorReturnIntervals.maybeIntervalFor(make_pair(callee, 0));
+                    auto calleeInterval = Ctx->errorHandlingRules.functionErrorReturnIntervals.maybeIntervalFor(make_pair(callee, 0));
                     if (calleeInterval.hasValue() && !calleeInterval.getValue()->empty()) {
                         unionOfIntervals.unionInPlace(*calleeInterval.getValue());
                         intersectionOfIntervals.intersectionInPlace(*calleeInterval.getValue());
@@ -533,7 +533,7 @@ void ErrorCheckViolationFinderPass::report() const {
                 if (!didOutputCallees) {
                     LOG(LOG_INFO, "  Callees:\n");
                     for (const auto *callee: callees.getValue()->second) {
-                        auto calleeInterval = Ctx->functionErrorReturnIntervals.maybeIntervalFor(make_pair(callee, 0));
+                        auto calleeInterval = Ctx->errorHandlingRules.functionErrorReturnIntervals.maybeIntervalFor(make_pair(callee, 0));
                         if (calleeInterval.hasValue() && !calleeInterval.getValue()->empty()) {
                             LOG(LOG_INFO, "    -> " << callee->getName() << "\n");
                             LOG(LOG_INFO, "       ");
@@ -562,7 +562,7 @@ void ErrorCheckViolationFinderPass::performReplaces(map<pair<const Function*, un
     for (auto& mapEntry : replaceMap) {
         const auto& pair = mapEntry.first;
         auto& interval = mapEntry.second;
-        Ctx->functionErrorReturnIntervals.replaceIntervalFor(pair, std::move(interval));
+        Ctx->errorHandlingRules.functionErrorReturnIntervals.replaceIntervalFor(pair, std::move(interval));
     }
 }
 
@@ -581,12 +581,12 @@ void ErrorCheckViolationFinderPass::stage0(Module *M) {
         map<pair<const Function*, unsigned int>, Interval> replaceMap;
         for (const auto &function: *M) {
             if (!Ctx->shouldSkipFunction(&function))
-                determineMissingChecksAndPropagationRules(function, Ctx->functionErrorReturnIntervals,
+                determineMissingChecksAndPropagationRules(function, Ctx->errorHandlingRules.functionErrorReturnIntervals,
                                                           outputErrorIntervals, functionsToInspectNext, handledFunctionPairs, replaceMap);
         }
         {
             performReplaces(replaceMap);
-            Ctx->functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
+            Ctx->errorHandlingRules.functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
         }
         bool ran = false;
         while (!outputErrorIntervals.empty() && !functionsToInspectNext.empty()) {
@@ -599,14 +599,14 @@ void ErrorCheckViolationFinderPass::stage0(Module *M) {
             set<const Function *> functionsToInspectNextInNext;
             replaceMap.clear();
             for (const auto *functionToInspectNext: functionsToInspectNext) {
-                determineMissingChecksAndPropagationRules(*functionToInspectNext, Ctx->functionErrorReturnIntervals,
+                determineMissingChecksAndPropagationRules(*functionToInspectNext, Ctx->errorHandlingRules.functionErrorReturnIntervals,
                                                           outputErrorIntervalsInNext, functionsToInspectNextInNext, handledFunctionPairs, replaceMap);
             }
 
             {
                 performReplaces(replaceMap);
                 // Merge all interval rules together because we need the combined info for detecting incorrect checks!
-                Ctx->functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
+                Ctx->errorHandlingRules.functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
             }
 
             // Prepare next iteration.
@@ -615,17 +615,17 @@ void ErrorCheckViolationFinderPass::stage0(Module *M) {
 
             // Special merge case for last iteration
             if (!outputErrorIntervals.empty() && functionsToInspectNext.empty()) {
-                Ctx->functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
+                Ctx->errorHandlingRules.functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
             }
         }
         if (!ran) {
-            Ctx->functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
+            Ctx->errorHandlingRules.functionErrorReturnIntervals.mergeDestructivelyForOther(outputErrorIntervals);
         }
     }
 }
 
 void ErrorCheckViolationFinderPass::determineTruncationBugs() const {
-    for (const auto& entry : Ctx->functionErrorReturnIntervals) {
+    for (const auto& entry : Ctx->errorHandlingRules.functionErrorReturnIntervals) {
         const auto& functionKeyPair = entry.first;
         const auto& interval = entry.second;
         if (interval.empty())
@@ -678,7 +678,7 @@ void ErrorCheckViolationFinderPass::determineSignednessBugs() const {
         }
     };
     DenseMap<StringRef, SignednessCounter> typeToSignednessCounter;
-    for (const auto& entry : Ctx->functionErrorReturnIntervals) {
+    for (const auto& entry : Ctx->errorHandlingRules.functionErrorReturnIntervals) {
         const auto& functionKeyPair = entry.first;
         const auto& interval = entry.second;
         if (interval.empty() || functionKeyPair.first->empty())
@@ -703,7 +703,7 @@ void ErrorCheckViolationFinderPass::determineSignednessBugs() const {
             LOG(LOG_VERBOSE, "Signedness " << name << ": " << counter.verdict() << "\t" << counter.neg1 << ", " << counter.zero << "," << counter.pos1 << "\n");
         }
     }
-    for (const auto& entry : Ctx->functionErrorReturnIntervals) {
+    for (const auto& entry : Ctx->errorHandlingRules.functionErrorReturnIntervals) {
         const auto& functionKeyPair = entry.first;
         const auto& interval = entry.second;
         if (interval.empty() || functionKeyPair.first->empty())
