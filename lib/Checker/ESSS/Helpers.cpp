@@ -66,7 +66,7 @@ llvm::Optional<vector<string>> getListOfTestCases() {
     vector<string> vec;
     string segment;
     while (getline(ss, segment, ',')) {
-        vec.emplace_back(move(segment));
+        vec.emplace_back(std::move(segment));
     }
     return vec;
 }

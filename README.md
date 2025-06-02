@@ -17,6 +17,7 @@ The current version has been tested on x86 Linux and ARM Mac using LLVM-12 and L
 - **Sea-DSA**: A context-sensitive, field-sensitive alias analysis based on Data Structure Analysis (See `lib/Alias/seadsa`)
 - **Andersen**: Context-insensitive points-to analysis implementation (without on-the-fly callgraph construction) (See `lib/Alias/Andersen`)
 - **FPA**: Function Pointer Analysis with multiple approaches (FLTA, MLTA, MLTADF, KELP) for resolving indirect function calls (See `lib/Alias/FPA`)
+- **DynAA**: Dynamic Alias Analysis Checker that validates static alias analysis results by observing pointer addresses at runtime (See `tools/dynaa`)
 
 ### Intermediate Representations
 
@@ -160,6 +161,32 @@ Examples:
 
 # Using KELP analysis with debug info
 ./fpa -analysis-type=4 -debug input.bc
+```
+
+### Using DynAA
+
+DynAA is a dynamic alias analysis checker that validates static alias analysis results against runtime behavior:
+
+```bash
+# 1. Compile the test program to LLVM IR
+clang -emit-llvm -c example.cpp -o example.bc
+
+# 2. Instrument the code for dynamic analysis
+./bin/dynaa-instrument example.bc -o example.inst.bc
+
+# 3. Compile the instrumented IR and link with the runtime library
+clang example.inst.bc libRuntime.a -o example.inst
+
+# 4. Run the instrumented program to collect runtime pointer information
+LOG_DIR=<log-dir> ./example.inst
+
+# 5. Check the collected information against a static alias analysis
+./bin/dynaa-check example.bc <log-dir>/pts.log basic-aa
+```
+
+To dump the binary log files to a readable format:
+```bash
+./bin/dynaa-log-dump <log-dir>/pts.log
 ```
 
 ### Using Kint
