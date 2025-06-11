@@ -1,9 +1,16 @@
 #include "Alias/PointerAnalysisInterface.h"
 #include "Alias/Andersen/AndersenAA.h"
+#include "Alias/CFLAA/CFLSteensAliasAnalysis.h"
+#include "Alias/CFLAA/CFLAndersAliasAnalysis.h"
 
+#include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+// #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <string>
+#include <memory>
 
 using namespace llvm;
 using namespace lotus;
@@ -17,7 +24,6 @@ static cl::opt<std::string> DefaultAnalysisType(
 // Andersen Pointer Analysis Implementation
 //===----------------------------------------------------------------------===//
 
-// Implementation class to bridge between our interface and Andersen implementation
 class AndersenPointerAnalysisResult::Implementation {
 private:
   std::unique_ptr<AndersenAAResult> Result;
@@ -29,23 +35,6 @@ public:
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     return Result->alias(LocA, LocB);
-  }
-
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal) {
-    return Result->pointsToConstantMemory(Loc, OrLocal);
-  }
-
-  // Get points-to set from Andersen's analysis
-  std::vector<const Value*> getPointsToSet(const Value *Ptr) {
-    std::vector<const Value*> Result;
-    
-    // The implementation will need to extract points-to information
-    // from Andersen's internal representation
-    // This is a simplified placeholder - actual implementation would need to 
-    // extract data from Andersen's analysis
-    (void)Ptr; // Mark parameter as used
-    
-    return Result;
   }
 };
 
@@ -59,55 +48,30 @@ AliasResult AndersenPointerAnalysisResult::alias(const MemoryLocation &LocA,
   return Impl->alias(LocA, LocB);
 }
 
-std::vector<const Value*> AndersenPointerAnalysisResult::getPointsToSet(
-    const Value *Ptr) {
-  return Impl->getPointsToSet(Ptr);
-}
-
-bool AndersenPointerAnalysisResult::pointsTo(const Value *Ptr, const Value *Target) {
-  auto PtsSet = getPointsToSet(Ptr);
-  return std::find(PtsSet.begin(), PtsSet.end(), Target) != PtsSet.end();
-}
-
-bool AndersenPointerAnalysisResult::pointsToConstantMemory(
-    const MemoryLocation &Loc, bool OrLocal) {
-  return Impl->pointsToConstantMemory(Loc, OrLocal);
-}
-
 //===----------------------------------------------------------------------===//
-// CFLAnder Pointer Analysis Implementation
+// CFLAnders Pointer Analysis Implementation
 //===----------------------------------------------------------------------===//
 
 class CFLAnderPointerAnalysisResult::Implementation {
+private:
+  std::unique_ptr<CFLAndersAAResult> Result;
+
 public:
   Implementation(const Module &Mod) {
-    // In a real implementation, we would initialize CFLAnders here
-    // Using the module
-    errs() << "CFLAnder initialized for module: " << Mod.getName() << "\n";
+    // Create a function to get TargetLibraryInfo
+    auto GetTLI = [](Function &) -> const TargetLibraryInfo & {
+      static TargetLibraryInfoImpl TLII;
+      static TargetLibraryInfo TLI(TLII);
+      return TLI;
+    };
+    
+    Result = std::make_unique<CFLAndersAAResult>(GetTLI);
+    errs() << "CFLAnders initialized for module: " << Mod.getName() << "\n";
   }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
-    // This is a placeholder
-    (void)LocA;
-    (void)LocB;
-    // In a real implementation, we would call into CFLAnders here
-    return AliasResult::MayAlias;
-  }
-
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal) {
-    // This is a placeholder
-    (void)Loc;
-    (void)OrLocal;
-    // In a real implementation, we would call into CFLAnders here
-    return false;
-  }
-
-  std::vector<const Value*> getPointsToSet(const Value *Ptr) {
-    std::vector<const Value*> Result;
-    // This is a placeholder
-    (void)Ptr;
-    // In a real implementation, we would extract information from CFLAnders
-    return Result;
+    AAQueryInfo AAQI(nullptr);
+    return Result->alias(LocA, LocB, AAQI);
   }
 };
 
@@ -121,58 +85,30 @@ AliasResult CFLAnderPointerAnalysisResult::alias(const MemoryLocation &LocA,
   return Impl->alias(LocA, LocB);
 }
 
-std::vector<const Value*> CFLAnderPointerAnalysisResult::getPointsToSet(
-    const Value *Ptr) {
-  return Impl->getPointsToSet(Ptr);
-}
-
-bool CFLAnderPointerAnalysisResult::pointsTo(const Value *Ptr, const Value *Target) {
-  // In a real implementation, we would call directly into CFLAnders' alias
-  // query for efficiency
-  MemoryLocation PtrLoc = MemoryLocation::getBeforeOrAfter(Ptr);
-  MemoryLocation TargetLoc = MemoryLocation::getBeforeOrAfter(Target);
-  return alias(PtrLoc, TargetLoc) != AliasResult::NoAlias;
-}
-
-bool CFLAnderPointerAnalysisResult::pointsToConstantMemory(
-    const MemoryLocation &Loc, bool OrLocal) {
-  return Impl->pointsToConstantMemory(Loc, OrLocal);
-}
-
 //===----------------------------------------------------------------------===//
 // CFLSteens Pointer Analysis Implementation
 //===----------------------------------------------------------------------===//
 
 class CFLSteensPointerAnalysisResult::Implementation {
+private:
+  std::unique_ptr<CFLSteensAAResult> Result;
+
 public:
   Implementation(const Module &Mod) {
-    // In a real implementation, we would initialize CFLSteens here
-    // Using the module
+    // Create a function to get TargetLibraryInfo
+    auto GetTLI = [](Function &) -> const TargetLibraryInfo & {
+      static TargetLibraryInfoImpl TLII;
+      static TargetLibraryInfo TLI(TLII);
+      return TLI;
+    };
+    
+    Result = std::make_unique<CFLSteensAAResult>(GetTLI);
     errs() << "CFLSteens initialized for module: " << Mod.getName() << "\n";
   }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
-    // This is a placeholder
-    (void)LocA;
-    (void)LocB;
-    // In a real implementation, we would call into CFLSteens here
-    return AliasResult::MayAlias;
-  }
-
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal) {
-    // This is a placeholder
-    (void)Loc;
-    (void)OrLocal;
-    // In a real implementation, we would call into CFLSteens here
-    return false;
-  }
-
-  std::vector<const Value*> getPointsToSet(const Value *Ptr) {
-    std::vector<const Value*> Result;
-    // This is a placeholder
-    (void)Ptr;
-    // In a real implementation, we would extract information from CFLSteens
-    return Result;
+    AAQueryInfo AAQI(nullptr);
+    return Result->alias(LocA, LocB, AAQI);
   }
 };
 
@@ -186,87 +122,35 @@ AliasResult CFLSteensPointerAnalysisResult::alias(const MemoryLocation &LocA,
   return Impl->alias(LocA, LocB);
 }
 
-std::vector<const Value*> CFLSteensPointerAnalysisResult::getPointsToSet(
-    const Value *Ptr) {
-  return Impl->getPointsToSet(Ptr);
-}
-
-bool CFLSteensPointerAnalysisResult::pointsTo(const Value *Ptr, const Value *Target) {
-  // In a real implementation, we would call directly into CFLSteens' alias
-  // query for efficiency
-  MemoryLocation PtrLoc = MemoryLocation::getBeforeOrAfter(Ptr);
-  MemoryLocation TargetLoc = MemoryLocation::getBeforeOrAfter(Target);
-  return alias(PtrLoc, TargetLoc) != AliasResult::NoAlias;
-}
-
-bool CFLSteensPointerAnalysisResult::pointsToConstantMemory(
-    const MemoryLocation &Loc, bool OrLocal) {
-  return Impl->pointsToConstantMemory(Loc, OrLocal);
-}
-
 //===----------------------------------------------------------------------===//
-// DyckAA Pointer Analysis Implementation
+// BasicAA Pointer Analysis Implementation
 //===----------------------------------------------------------------------===//
 
-class DyckAAPointerAnalysisResult::Implementation {
+class BasicAAPointerAnalysisResult::Implementation {
 public:
   Implementation(const Module &Mod) {
-    // In a real implementation, we would initialize DyckAA here
-    // Using the module
-    errs() << "DyckAA initialized for module: " << Mod.getName() << "\n";
+    errs() << "BasicAA initialized for module: " << Mod.getName() << "\n";
   }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
-    // This is a placeholder
-    (void)LocA;
-    (void)LocB;
-    // In a real implementation, we would call into DyckAA here
+    // Conservative approach for BasicAA
+    if (LocA.Ptr == LocB.Ptr) {
+      return AliasResult::MustAlias;
+    }
+    
+    // Conservative: assume everything may alias
     return AliasResult::MayAlias;
-  }
-
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal) {
-    // This is a placeholder
-    (void)Loc;
-    (void)OrLocal;
-    // In a real implementation, we would call into DyckAA here
-    return false;
-  }
-
-  std::vector<const Value*> getPointsToSet(const Value *Ptr) {
-    std::vector<const Value*> Result;
-    // This is a placeholder
-    (void)Ptr;
-    // In a real implementation, we would extract information from DyckAA
-    return Result;
   }
 };
 
-DyckAAPointerAnalysisResult::DyckAAPointerAnalysisResult(const Module &M)
+BasicAAPointerAnalysisResult::BasicAAPointerAnalysisResult(const Module &M)
     : Impl(std::make_unique<Implementation>(M)) {}
 
-DyckAAPointerAnalysisResult::~DyckAAPointerAnalysisResult() = default;
+BasicAAPointerAnalysisResult::~BasicAAPointerAnalysisResult() = default;
 
-AliasResult DyckAAPointerAnalysisResult::alias(const MemoryLocation &LocA,
+AliasResult BasicAAPointerAnalysisResult::alias(const MemoryLocation &LocA,
                                        const MemoryLocation &LocB) {
   return Impl->alias(LocA, LocB);
-}
-
-std::vector<const Value*> DyckAAPointerAnalysisResult::getPointsToSet(
-    const Value *Ptr) {
-  return Impl->getPointsToSet(Ptr);
-}
-
-bool DyckAAPointerAnalysisResult::pointsTo(const Value *Ptr, const Value *Target) {
-  // In a real implementation, we would call directly into DyckAA's alias
-  // query for efficiency
-  MemoryLocation PtrLoc = MemoryLocation::getBeforeOrAfter(Ptr);
-  MemoryLocation TargetLoc = MemoryLocation::getBeforeOrAfter(Target);
-  return alias(PtrLoc, TargetLoc) != AliasResult::NoAlias;
-}
-
-bool DyckAAPointerAnalysisResult::pointsToConstantMemory(
-    const MemoryLocation &Loc, bool OrLocal) {
-  return Impl->pointsToConstantMemory(Loc, OrLocal);
 }
 
 //===----------------------------------------------------------------------===//
@@ -281,8 +165,8 @@ std::unique_ptr<PointerAnalysisResult> PointerAnalysisFactory::create(
     return std::make_unique<CFLAnderPointerAnalysisResult>(M);
   } else if (Type == "cfl-steens") {
     return std::make_unique<CFLSteensPointerAnalysisResult>(M);
-  } else if (Type == "dyck") {
-    return std::make_unique<DyckAAPointerAnalysisResult>(M);
+  } else if (Type == "basic") {
+    return std::make_unique<BasicAAPointerAnalysisResult>(M);
   }
   
   // Default to Andersen if the requested type is not available
