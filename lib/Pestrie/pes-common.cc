@@ -13,11 +13,11 @@
 #include <cmath>
 #include <ctime>
 #include <cstring>
-#include "segtree.hh"
-#include "histogram.hh"
-#include "pestrie.hh"
-#include "profile_helper.h"
-#include "matrix-ops.hh"
+#include "Pestrie/segtree.hh"
+#include "Pestrie/histogram.hh"
+#include "Pestrie/pestrie.hh"
+#include "Pestrie/profile_helper.h"
+#include "Pestrie/matrix-ops.hh"
 
 using namespace std;
 

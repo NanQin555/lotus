@@ -9,10 +9,10 @@
  */
 
 #include <assert.h>
-#include "matrix-ops.hh"
-#include "bit-index.hh"
-#include "profile_helper.h"
-#include "constants.hh"
+#include "Pestrie/matrix-ops.hh"
+#include "Pestrie/bit-index.hh"
+#include "Pestrie/profile_helper.h"
+#include "Pestrie/constants.hh"
 
 using namespace std;
 

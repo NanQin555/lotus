@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <vector>
-#include "segtree.hh"
+#include "Pestrie/segtree.hh"
 
 using namespace std;
 

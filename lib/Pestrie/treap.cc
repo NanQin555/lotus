@@ -9,7 +9,7 @@
  * initial: 2012.9
  */
 
-#include "treap.hh"
+#include "Pestrie/treap.hh"
 #include <cstdlib>
 
 using namespace std;

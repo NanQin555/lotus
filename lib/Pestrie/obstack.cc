@@ -24,7 +24,7 @@
 #include <config.h>
 #endif
 
-#include "obstack.h"
+#include "Pestrie/obstack.h"
 #include <stdlib.h>
 
 /* NOTE BEFORE MODIFYING THIS FILE: This version number must be

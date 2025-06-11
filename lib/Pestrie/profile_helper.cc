@@ -14,7 +14,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
-#include "profile_helper.h"
+#include "Pestrie/profile_helper.h"
 
 using namespace std;
 

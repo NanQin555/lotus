@@ -12,10 +12,10 @@
 #include <cstdio>
 #include <unistd.h>
 #include <cstdlib>
-#include "constants.hh"
-#include "pestrie.hh"
-#include "profile_helper.h"
-#include "segtree.hh"
+#include "Pestrie/constants.hh"
+#include "Pestrie/pestrie.hh"
+#include "Pestrie/profile_helper.h"
+#include "Pestrie/segtree.hh"
 
 using namespace std;
 

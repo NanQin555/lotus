@@ -10,7 +10,7 @@
 
 #include <cstring>
 #include <cstdlib>
-#include "matrix-ops.hh"
+#include "Pestrie/matrix-ops.hh"
 
 using namespace std;
 

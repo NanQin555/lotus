@@ -9,10 +9,10 @@
  */
 
 #include <cstring>
-#include "bit-index.hh"
-#include "profile_helper.h"
-#include "constants.hh"
-#include "histogram.hh"
+#include "Pestrie/bit-index.hh"
+#include "Pestrie/profile_helper.h"
+#include "Pestrie/constants.hh"
+#include "Pestrie/histogram.hh"
 
 using namespace std;
 

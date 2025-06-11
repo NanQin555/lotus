@@ -18,11 +18,11 @@
 #include <algorithm>
 #include <ctime>
 #include <cassert>
-#include "options.hh"
-#include "shapes.hh"
-#include "query.hh"
-#include "query-inl.hh"
-#include "profile_helper.h"
+#include "Pestrie/options.hh"
+#include "Pestrie/shapes.hh"
+#include "Pestrie/query.hh"
+#include "Pestrie/query-inl.hh"
+#include "Pestrie/profile_helper.h"
 
 using namespace std;
 

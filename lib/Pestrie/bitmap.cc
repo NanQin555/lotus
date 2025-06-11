@@ -25,8 +25,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
-#include "obstack.h"
-#include "bitmap.h"
+#include "Pestrie/obstack.h"
+#include "Pestrie/bitmap.h"
 #define XOBNEW(O, T)      ((T *) obstack_alloc ((O), sizeof (T)))
 
 /* Global data */

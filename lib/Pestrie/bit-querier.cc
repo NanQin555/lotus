@@ -14,11 +14,11 @@
 #include <cstdio>
 #include <cstring>
 #include <set>
-#include "options.hh"
-#include "profile_helper.h"
-#include "matrix-ops.hh"
-#include "query.hh"
-#include "query-inl.hh"
+#include "Pestrie/options.hh"
+#include "Pestrie/profile_helper.h"
+#include "Pestrie/matrix-ops.hh"
+#include "Pestrie/query.hh"
+#include "Pestrie/query-inl.hh"
 
 using namespace std;
 

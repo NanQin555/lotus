@@ -13,9 +13,9 @@
 #include <cstdlib>
 #include <cstdio>
 #include <algorithm>
-#include "options.hh"
-#include "query.hh"
-#include "profile_helper.h"
+#include "Pestrie/options.hh"
+#include "Pestrie/query.hh"
+#include "Pestrie/profile_helper.h"
 
 using namespace std;
 

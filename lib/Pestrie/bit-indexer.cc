@@ -15,9 +15,9 @@
 #include <cstdio>
 #include <unistd.h>
 #include <cstdlib>
-#include "bit-index.hh"
-#include "constants.hh"
-#include "profile_helper.h"
+#include "Pestrie/bit-index.hh"
+#include "Pestrie/constants.hh"
+#include "Pestrie/profile_helper.h"
 
 static char* input_file = NULL;
 static char* output_file = NULL;

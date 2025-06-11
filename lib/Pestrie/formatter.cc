@@ -11,8 +11,9 @@
 #include <cstdio>
 #include <unistd.h>
 #include <cstdlib>
-#include "matrix_ops.hh"
-#include "options.h"
+#include "Pestrie/matrix-ops.hh"
+#include "Pestrie/options.hh"
+#include "Pestrie/constants.hh"
 
 using namespace std;
 

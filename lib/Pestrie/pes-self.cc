@@ -12,8 +12,8 @@
 #include <cstring>
 #include <algorithm>
 #include <climits>
-#include "pestrie.hh"
-#include "profile_helper.h"
+#include "Pestrie/pestrie.hh"
+#include "Pestrie/profile_helper.h"
 
 using namespace std;
 
