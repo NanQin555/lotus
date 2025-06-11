@@ -20,30 +20,13 @@ add_executable(AndersenExample AndersenExample.cpp)
 target_include_directories(AndersenExample PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 # Get LLVM components needed for examples that don't get LLVM through dependencies
-llvm_map_components_to_libnames(llvm_libs support core irreader analysis)
+llvm_map_components_to_libnames(llvm_libs irreader analysis)
 
 target_link_libraries(AndersenExample PRIVATE 
   AndersenStatic 
   ${llvm_libs}
 ) 
 
-# Pointer Analysis Interface Example
-add_executable(PointerAnalysisExample PointerAnalysisExample.cpp)
-target_include_directories(PointerAnalysisExample PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(PointerAnalysisExample PRIVATE 
-  PointerAnalysisInterface
-  ${llvm_libs}
-) 
-
-# BDD Points-to Set Benchmark
-# add_executable(BDDPtsSetBenchmark BDDPtsSetBenchmark.cpp)
-# target_include_directories(BDDPtsSetBenchmark PUBLIC ${CMAKE_SOURCE_DIR}/include)
-# target_link_libraries(BDDPtsSetBenchmark PRIVATE
-#  AndersenStatic
-#  BDD
-#  ${llvm_libs}
-#  m
-#) 
 
 # PDG Example
 add_executable(PDGExample PDGExample.cpp)
@@ -55,3 +38,22 @@ target_link_libraries(PDGExample PRIVATE
 
 # WPDS Examples 
 # add_subdirectory(wpds) 
+
+
+# BDD Points-to Set Benchmark
+# add_executable(BDDPtsSetBenchmark BDDPtsSetBenchmark.cpp)
+# target_include_directories(BDDPtsSetBenchmark PUBLIC ${CMAKE_SOURCE_DIR}/include)
+# target_link_libraries(BDDPtsSetBenchmark PRIVATE
+#  AndersenStatic
+#  BDD
+#  ${llvm_libs}
+#  m
+#) 
+
+# Pointer Analysis Interface Example
+# add_executable(PointerAnalysisExample PointerAnalysisExample.cpp)
+# target_include_directories(PointerAnalysisExample PUBLIC ${CMAKE_SOURCE_DIR}/include)
+# target_link_libraries(PointerAnalysisExample PRIVATE 
+#  PointerAnalysisInterface
+#  ${llvm_libs}
+#) 

@@ -9,7 +9,7 @@ set(AndersenSourceCodes
 )
 
 # Get LLVM components for Andersen
-llvm_map_components_to_libnames(andersen_llvm_libs support core analysis)
+llvm_map_components_to_libnames(andersen_llvm_libs analysis)
 
 add_library(AndersenObj OBJECT ${AndersenSourceCodes})
 add_library(Andersen SHARED $<TARGET_OBJECTS:AndersenObj>)
