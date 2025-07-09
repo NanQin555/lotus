@@ -120,6 +120,7 @@ void DyckCallGraph::dotCallGraph(const std::string &ModuleIdentifier) {
                 std::string S;
                 raw_string_ostream RSO(S);
                 if (PC->getInstruction()) {
+                    RSO << "Indirect Call: ";
                     RSO << *(PC->getInstruction());
                 } else {
                     RSO << "Hidden";
@@ -141,9 +142,9 @@ void DyckCallGraph::dotCallGraph(const std::string &ModuleIdentifier) {
                 Function *MCF = *MCIt;
                 if (FunctionMap.count(MCF)) {
                     if (WithEdgeLabels) {
-                        fprintf(FOut, "\tf%p->f%p[label=\"%s\"]\n", FW, FunctionMap[MCF], EdgeLabelData);
+                        fprintf(FOut, "\tf%p->f%p[label=\"%s\", style=dashed]\n", FW, FunctionMap[MCF], EdgeLabelData);
                     } else {
-                        fprintf(FOut, "\tf%p->f%p\n", FW, FunctionMap[MCF]);
+                        fprintf(FOut, "\tf%p->f%p[style=dashed]\n", FW, FunctionMap[MCF]);
                     }
                 } else {
                     llvm_unreachable("ERROR in printCG when print fp calls.");
