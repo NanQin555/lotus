@@ -17,6 +17,7 @@
  */
 
 #include "Alias/DyckAA/DyckCallGraph.h"
+#include <cxxabi.h>
 
 static cl::opt<bool> WithEdgeLabels("with-labels", cl::init(false), cl::Hidden,
                                     cl::desc("Determine whether there are edge lables in the cg."));
@@ -157,6 +158,47 @@ void DyckCallGraph::dotCallGraph(const std::string &ModuleIdentifier) {
     }
 
     fprintf(FOut, "}\n");
+    fclose(FOut);
+}
+
+std::string demangle_funcname(const char* name) {
+    int status = 0;
+    char* demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
+    std::string str = (status == 0 && demangled) ? demangled : name;
+    free(demangled);
+    return str;
+}
+
+void DyckCallGraph::dumpIndirecrtCall(const std::string &ModuleIdentifier) {
+    std::string DumpFileName;
+    DumpFileName.append(ModuleIdentifier);
+    DumpFileName.append(".indirect.call.log");
+
+    FILE *FOut = fopen(DumpFileName.data(), "w+");
+
+    auto FWIt = FunctionMap.begin();
+    while (FWIt != FunctionMap.end()) {
+        DyckCallGraphNode *FW = FWIt->second;
+        auto FPIt = FW->pointer_call_begin();
+        while (FPIt != FW->pointer_call_end()) {
+            PointerCall *PC = *FPIt;
+            char *EdgeLabelData = nullptr;
+            auto MCIt = PC->begin();
+            while (MCIt != PC->end()) {
+                Function *MCF = *MCIt;
+                if (FunctionMap.count(MCF)) {
+                    fprintf(FOut, "\t%p:%s\t->\t%p:%s\n", \
+                            FW, demangle_funcname(FW->getLLVMFunction()->getName().data()).c_str(), \
+                            FunctionMap[MCF], demangle_funcname(FunctionMap[MCF]->getLLVMFunction()->getName().data()).c_str(), EdgeLabelData);
+                } else {
+                    llvm_unreachable("ERROR in printCG when print fp calls.");
+                }
+                MCIt++;
+            }
+            FPIt++;
+        }
+        FWIt++;
+    }
     fclose(FOut);
 }
 

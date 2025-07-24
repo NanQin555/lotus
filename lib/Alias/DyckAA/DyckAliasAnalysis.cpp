@@ -33,6 +33,9 @@ static cl::opt<bool> PrintAliasSetInformation("print-alias-set-info", cl::init(f
 static cl::opt<bool> DotCallGraph("dot-dyck-callgraph", cl::init(false), cl::Hidden,
                                   cl::desc("Calculate the program's call graph and output into a \"dot\" file."));
 
+static cl::opt<bool> DumpIndirecrtCall("dump-indirect-call", cl::init(false), cl::Hidden,
+                                      cl::desc("Dump indirect call info"));
+
 static cl::opt<bool> CountFP("count-fp", cl::init(false), cl::Hidden,
                              cl::desc("Calculate how many functions a function pointer may point to."));
 
@@ -102,6 +105,12 @@ bool DyckAliasAnalysis::runOnModule(Module &M) {
     if (DotCallGraph) {
         outs() << "Printing call graph...\n";
         DyckCG->dotCallGraph(M.getModuleIdentifier());
+        outs() << "Done!\n\n";
+    }
+
+    if (DumpIndirecrtCall) {
+        outs() << "Dumping indirect call info...\n";
+        DyckCG->dumpIndirecrtCall(M.getModuleIdentifier());
         outs() << "Done!\n\n";
     }
 

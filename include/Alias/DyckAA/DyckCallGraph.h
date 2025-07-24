@@ -80,6 +80,8 @@ public:
 
     void dotCallGraph(const std::string &ModuleIdentifier);
 
+    void dumpIndirecrtCall(const std::string &ModuleIdentifier);
+
     void printFunctionPointersInformation(const std::string &ModuleIdentifier);
 
 };
